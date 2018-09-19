@@ -2,7 +2,11 @@ package errctx
 
 import (
 	"errors"
+	"fmt"
+	"runtime"
 	. "testing"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -35,4 +39,35 @@ func TestErrCtx(t *T) {
 	assert.Nil(t, Get(err2, key(2)))
 	assert.Equal(t, "b", Get(err3, key(1)))
 	assert.Equal(t, "c", Get(err3, key(2)))
+}
+
+func TestMark(t *T) {
+	err := errors.New("bar")
+
+	l, ok := Line(err)
+	assert.False(t, ok)
+	assert.Empty(t, l)
+
+	_, _, ln, ok := runtime.Caller(0)
+	require.True(t, ok)
+	err = Mark(err)
+	l, ok = Line(err)
+	assert.True(t, ok)
+	assert.Equal(t, fmt.Sprintf("errctx_test.go:%d", ln+2), l)
+
+	// calling it again shouldn't do anything
+	err = Mark(err)
+	l, ok = Line(err)
+	assert.True(t, ok)
+	assert.Equal(t, fmt.Sprintf("errctx_test.go:%d", ln+2), l)
+
+	err = func() error {
+		// 1 should return the anonymous function
+		return MarkSkip(errors.New("bar"), 1)
+	}()
+	_, _, ln, ok = runtime.Caller(0)
+	require.True(t, ok)
+	l, ok = Line(err)
+	assert.True(t, ok)
+	assert.Equal(t, fmt.Sprintf("errctx_test.go:%d", ln-1), l)
 }
