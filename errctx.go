@@ -2,6 +2,14 @@
 // error objects
 package errctx
 
+import (
+	"fmt"
+	"path"
+	"runtime"
+)
+
+type sourceKey int
+
 type errctx struct {
 	err error
 	ctx map[interface{}]interface{}
@@ -62,4 +70,41 @@ func Get(err error, k interface{}) interface{} {
 		return nil
 	}
 	return ec.ctx[k]
+}
+
+// Mark records the filename and line number that called Mark and sets it on
+// the error. Future calls to Mark will NOT overwrite the previous line.
+func Mark(err error) error {
+	return MarkSkip(err, 1)
+}
+
+// MarkSkip is like Mark but allows you to skip an arbitrary amount of
+// functions from the stack. Sending skip of 0 means to Mark the caller of this
+// function.
+func MarkSkip(err error, skip int) error {
+	if err == nil {
+		return nil
+	}
+	// check if it was already marked
+	if Get(err, sourceKey(0)) != nil {
+		return err
+	}
+	// since 0 means the caller of Caller, 1 means the caller of MarkSkip
+	_, file, line, ok := runtime.Caller(1 + skip)
+	if !ok {
+		return err
+	}
+	file = path.Base(file)
+	return Set(err, sourceKey(0), fmt.Sprintf("%s:%d", file, line))
+}
+
+// Line returns the file and line number where Mark was first called on the
+// error and a boolean indicating if any line was found.
+func Line(err error) (string, bool) {
+	ec, ok := err.(errctx)
+	if !ok {
+		return "", false
+	}
+	s, ok := ec.ctx[sourceKey(0)].(string)
+	return s, ok
 }
