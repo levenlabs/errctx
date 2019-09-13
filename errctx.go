@@ -15,8 +15,14 @@ type errctx struct {
 	ctx map[interface{}]interface{}
 }
 
+// Error implements the error interface
 func (ec errctx) Error() string {
 	return ec.err.Error()
+}
+
+// Unwrap returns the wrapped error. Necessary for errors.Is to work
+func (ec errctx) Unwrap() error {
+	return ec.err
 }
 
 // Base returns the underlying error object that was prevoiusly wrapped in a

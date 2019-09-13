@@ -21,6 +21,7 @@ func TestErrCtx(t *T) {
 	err1 := Set(err, key(0), "a")
 	assert.Equal(t, err.Error(), err1.Error())
 	assert.Equal(t, err, Base(err1))
+	assert.True(t, errors.Is(err1, err))
 	assert.Nil(t, Get(err, key(0)))
 	assert.Equal(t, "a", Get(err1, key(0)))
 
@@ -28,6 +29,7 @@ func TestErrCtx(t *T) {
 	assert.NotEqual(t, err1, err2)
 	assert.Equal(t, err.Error(), err2.Error())
 	assert.Equal(t, err, Base(err2))
+	assert.True(t, errors.Is(err2, err))
 	assert.Nil(t, Get(err, key(1)))
 	assert.Nil(t, Get(err2, key(0)))
 	assert.Equal(t, "b", Get(err2, key(1)))
@@ -35,6 +37,7 @@ func TestErrCtx(t *T) {
 	err3 := Set(err2, key(2), "c")
 	assert.Equal(t, err.Error(), err3.Error())
 	assert.Equal(t, err, Base(err3))
+	assert.True(t, errors.Is(err3, err))
 	assert.Nil(t, Get(err3, key(0)))
 	assert.Nil(t, Get(err2, key(2)))
 	assert.Equal(t, "b", Get(err3, key(1)))

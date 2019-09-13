@@ -15,9 +15,9 @@ Later on you can get the userID back:
 userID, ok := errctx.Get(err, "userID").(int64)
 ```
 
-If you want to get the original error object:
+If you want to check the original error object:
 ```
-if errctx.Base(err) == mgo.ErrNotFound {
+if errors.Is(err, mgo.ErrNotFound) {
 
 }
 ```
