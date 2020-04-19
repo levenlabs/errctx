@@ -6,9 +6,8 @@ import (
 	"runtime"
 	. "testing"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type key int
@@ -42,6 +41,10 @@ func TestErrCtx(t *T) {
 	assert.Nil(t, Get(err2, key(2)))
 	assert.Equal(t, "b", Get(err3, key(1)))
 	assert.Equal(t, "c", Get(err3, key(2)))
+
+	assert.True(t, err3.(errctx).Is(err3))
+	assert.True(t, err3.(errctx).Is(err2))
+	assert.True(t, err3.(errctx).Is(err2.(errctx).err))
 }
 
 func TestMark(t *T) {
