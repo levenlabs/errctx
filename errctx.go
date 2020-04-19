@@ -25,6 +25,13 @@ func (ec errctx) Unwrap() error {
 	return ec.err
 }
 
+// Is returns true if the sent error has the same underlying error or is the
+// underlying error. Without this then errors.Is(err, err2) won't work if they're
+// both wrapped errors.
+func (ec errctx) Is(err error) bool {
+	return err == ec.err || Base(err) == ec.err
+}
+
 // Base returns the underlying error object that was prevoiusly wrapped in a
 // call to Set. If the error did not come from Set it is returned as-is.
 func Base(err error) error {
