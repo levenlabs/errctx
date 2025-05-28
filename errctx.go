@@ -56,7 +56,6 @@ func Base(err error) error {
 //	err3 := errctx.Set(err2, "foo", "b")
 //	fmt.Println(errctx.Get(err2, "foo")) // "a"
 //	fmt.Println(errctx.Get(err3, "foo")) // "b"
-//
 func Set(err error, kvs ...interface{}) error {
 	ec := errctx{
 		err: Base(err),
@@ -74,15 +73,44 @@ func Set(err error, kvs ...interface{}) error {
 	return ec
 }
 
+func get(err error, k interface{}) (interface{}, bool) {
+	for {
+		if ec, ok := err.(errctx); ok {
+			if v, ok := ec.ctx[k]; ok {
+				return v, ok
+			}
+		}
+		switch x := err.(type) {
+		case interface{ Unwrap() error }:
+			err = x.Unwrap()
+			if err == nil {
+				return nil, false
+			}
+		case interface{ Unwrap() []error }:
+			for _, err := range x.Unwrap() {
+				if err == nil {
+					continue
+				}
+				if v, ok := get(err, k); ok {
+					return v, ok
+				}
+			}
+			return nil, false
+		default:
+			return nil, false
+		}
+	}
+}
+
 // Get retrieves the value associated with the key by a previous call to Set,
 // which this error should have been returned from. Returns nil if the key isn't
 // set, or if the error wasn't previously wrapped by Set at all.
+//
+// This will traverse the error chain until it finds an error returned by Set
+// that contains the key.
 func Get(err error, k interface{}) interface{} {
-	ec, ok := err.(errctx)
-	if !ok {
-		return nil
-	}
-	return ec.ctx[k]
+	v, _ := get(err, k)
+	return v
 }
 
 // Mark records the filename and line number that called Mark and sets it on
@@ -94,6 +122,8 @@ func Mark(err error) error {
 // MarkSkip is like Mark but allows you to skip an arbitrary amount of
 // functions from the stack. Sending skip of 0 means to Mark the caller of this
 // function.
+//
+// Returns nil if the sent error is nil.
 func MarkSkip(err error, skip int) error {
 	if err == nil {
 		return nil
@@ -114,10 +144,9 @@ func MarkSkip(err error, skip int) error {
 // Line returns the file and line number where Mark was first called on the
 // error and a boolean indicating if any line was found.
 func Line(err error) (string, bool) {
-	ec, ok := err.(errctx)
+	v, ok := get(err, sourceKey(0))
 	if !ok {
 		return "", false
 	}
-	s, ok := ec.ctx[sourceKey(0)].(string)
-	return s, ok
+	return v.(string), true
 }
